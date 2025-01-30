@@ -9,11 +9,11 @@ let openPicks: {
   }[]
 }[] = [];
 
-async function runInit(_client: Client, interaction: CommandInteraction) {
+async function initBlindPick(interaction: CommandInteraction) {
   if (!interaction.isChatInputCommand()) return;
 
-  const user1 = interaction.options.getUser("captain1", true);
-  const user2 = interaction.options.getUser("captain2", true);
+  const user1 = interaction.options.getUser("user1", true);
+  const user2 = interaction.options.getUser("user2", true);
   const name = interaction.options.getString("name")
 
   openPicks.push({
@@ -24,12 +24,12 @@ async function runInit(_client: Client, interaction: CommandInteraction) {
     ]
   })
 
-  await interaction.followUp({
+  await interaction.reply({
     content: `${name ?? "Blind pick"} between ${userMention(user1.id)} and ${userMention(user2.id)} initiated.`
   });
 }
 
-async function runPick(_client: Client, interaction: CommandInteraction) {
+async function respondToBlindPick(interaction: CommandInteraction) {
   if (!interaction.isChatInputCommand()) return;
   const inputtedResponse = interaction.options.getString("response", true)
 
@@ -38,9 +38,9 @@ async function runPick(_client: Client, interaction: CommandInteraction) {
   )
 
   if (!openPick) {
-    await interaction.followUp({
+    await interaction.reply({
       ephemeral: true,
-      content: `You are not a part of any open blind picks. Use /blindpickstart to start a blind pick.`
+      content: `You are not a part of any open blind picks.`
     });
     return
   }
@@ -52,9 +52,9 @@ async function runPick(_client: Client, interaction: CommandInteraction) {
   responseToFill.response = inputtedResponse;
 
   // ephemeral response, only visible to user
-  await interaction.followUp({
+  await interaction.reply({
     ephemeral: true,
-    content: `Response: ${inputtedResponse} received.`
+    content: `Received ${inputtedResponse}`
   });
 
   // public response
@@ -77,44 +77,56 @@ async function runPick(_client: Client, interaction: CommandInteraction) {
 
 }
 
-export const initBlindPick: Command = {
-  name: "blindpickstart",
-  description: "starts a blindpick between two users",
-  type: ApplicationCommandType.ChatInput,
-  options: [
-    {
-      name: "captain1",
-      description: "1 of 2 participants in the blind pick",
-      type: ApplicationCommandOptionType.User,
-      required: true
-    },
-    {
-      name: "captain2",
-      description: "2 of 2 participants in the blind pick",
-      type: ApplicationCommandOptionType.User,
-      required: true
-    },
-    {
-      name: "name",
-      description: "Optional name of the blind pick event",
-      type: ApplicationCommandOptionType.String,
-    },
-  ],
-  run: runInit
-};
+async function run(client: Client, interaction: CommandInteraction) {
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.options.getSubcommand() === "start")
+    initBlindPick(interaction);
+  else
+    respondToBlindPick(interaction);
+}
 
-export const respondBlindPick: Command = {
+export const blindpick: Command = {
   name: "blindpick",
-  description: "respond to the first open blindpick event you are a part of",
-  replyEphemeral: true,
+  description: "run a blind pick between two users",
+  run,
   type: ApplicationCommandType.ChatInput,
   options: [
     {
-      name: "response",
-      description: "Your response to the blind pick event",
-      type: ApplicationCommandOptionType.String,
-      required: true
+      type: ApplicationCommandOptionType.Subcommand,
+      name: "respond",
+      description: "respond to the first open blind pick you are a part of",
+      options: [
+        {
+          name: "response",
+          description: "Your response to the blind pick event",
+          type: ApplicationCommandOptionType.String,
+          required: true
+        },
+      ]
     },
-  ],
-  run: runPick
+    {
+      type: ApplicationCommandOptionType.Subcommand,
+      name: "start",
+      description: "starts a blindpick between two users",
+      options: [
+        {
+          name: "user1",
+          description: "1 of 2 participants in the blind pick",
+          type: ApplicationCommandOptionType.User,
+          required: true
+        },
+        {
+          name: "user2",
+          description: "2 of 2 participants in the blind pick",
+          type: ApplicationCommandOptionType.User,
+          required: true
+        },
+        {
+          name: "name",
+          description: "Optional name of the blind pick event",
+          type: ApplicationCommandOptionType.String,
+        },
+      ],
+    }
+  ]
 };
