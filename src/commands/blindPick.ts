@@ -1,8 +1,9 @@
-import { CommandInteraction, Client, ApplicationCommandType, ApplicationCommandOptionType, userMention } from "discord.js";
+import { CommandInteraction, Client, ApplicationCommandType, ApplicationCommandOptionType, userMention, channelMention } from "discord.js";
 import { Command } from "./types";
 
 let openPicks: {
   name?: string | null;
+  channel: string;
   responses: {
     id: string;
     response?: string;
@@ -18,6 +19,7 @@ async function initBlindPick(interaction: CommandInteraction) {
 
   openPicks.push({
     name,
+    channel: interaction.channelId,
     responses: [
       { id: user1.id, response: undefined },
       { id: user2.id, response: undefined },
@@ -34,13 +36,14 @@ async function respondToBlindPick(interaction: CommandInteraction) {
   const inputtedResponse = interaction.options.getString("response", true)
 
   const openPick = openPicks.find(pick =>
+    pick.channel === interaction.channelId &&
     pick.responses.some(res => res.id === interaction.user.id && !res.response)
   )
 
   if (!openPick) {
     await interaction.reply({
       ephemeral: true,
-      content: `You are not a part of any open blind picks.`
+      content: `You are not a part of any open blind picks in ${channelMention(interaction.channelId)}.`
     });
     return
   }
@@ -94,7 +97,7 @@ export const blindpick: Command = {
     {
       type: ApplicationCommandOptionType.Subcommand,
       name: "respond",
-      description: "respond to the first open blind pick you are a part of",
+      description: "respond to the first open blind pick you are a part of in the current channel",
       options: [
         {
           name: "response",
